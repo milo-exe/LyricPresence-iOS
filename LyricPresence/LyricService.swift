@@ -11,10 +11,23 @@ class LyricService: ObservableObject {
     @Published var isPaused = false
     @Published var errorMessage: String?
 
-    private var timer: Task<Void, Never>?
+    private var pollTask: Task<Void, Never>?
+    private var lyricTask: Task<Void, Never>?
     private var lastTrackId: String?
     private var lyrics: [LyricLine] = []
+    private var lastFetchTime: Date?
+    private var lastProgressMs: Int = 0
     private var lastPlayedAt: Date?
+
+    private var estimatedProgressMs: Int {
+        guard let fetchTime = lastFetchTime else { return 0 }
+        return lastProgressMs + Int(Date().timeIntervalSince(fetchTime) * 1000)
+    }
+
+    private var idleTimeoutMinutes: Int {
+        let v = UserDefaults.standard.integer(forKey: "idleTimeoutMinutes")
+        return v == 0 ? 5 : v
+    }
 
     private func applyCase(_ text: String) -> String {
         switch UserDefaults.standard.string(forKey: "lyricsCase") ?? "lower" {
@@ -24,27 +37,18 @@ class LyricService: ObservableObject {
         }
     }
 
-    private var idleTimeoutMinutes: Int {
-        UserDefaults.standard.integer(forKey: "idleTimeoutMinutes") == 0
-            ? 5
-            : UserDefaults.standard.integer(forKey: "idleTimeoutMinutes")
-    }
-
     func start() {
         guard !isRunning else { return }
         isRunning = true
         errorMessage = nil
-        timer = Task {
-            while !Task.isCancelled {
-                await tick()
-                try? await Task.sleep(for: .seconds(1))
-            }
-        }
+        startPolling()
     }
 
     func stop() {
-        timer?.cancel()
-        timer = nil
+        pollTask?.cancel()
+        lyricTask?.cancel()
+        pollTask = nil
+        lyricTask = nil
         isRunning = false
         isPaused = false
         currentLyric = ""
@@ -52,13 +56,25 @@ class LyricService: ObservableObject {
         Task { await DiscordManager.shared.clearStatus() }
     }
 
-    private func tick() async {
+    // MARK: - Spotify polling (every 3s for accurate progress sync)
+
+    private func startPolling() {
+        pollTask = Task {
+            while !Task.isCancelled {
+                await fetchTrack()
+                try? await Task.sleep(for: .seconds(3))
+            }
+        }
+    }
+
+    private func fetchTrack() async {
         guard let track = await SpotifyManager.shared.fetchCurrentTrack() else {
-            errorMessage = "Could not reach Spotify. Check your connection or token."
+            errorMessage = "Could not reach Spotify."
             if currentTrack != nil {
                 currentTrack = nil
                 nextTrack = nil
                 currentLyric = ""
+                lyricTask?.cancel()
                 await DiscordManager.shared.clearStatus()
             }
             return
@@ -67,7 +83,6 @@ class LyricService: ObservableObject {
         errorMessage = nil
         currentTrack = track
 
-        // Idle timeout — stop if nothing has played for X minutes
         if track.isPlaying {
             lastPlayedAt = Date()
         } else if let last = lastPlayedAt,
@@ -76,11 +91,11 @@ class LyricService: ObservableObject {
             return
         }
 
-        // Pause detection — clear status when paused
         if !track.isPlaying {
             if !isPaused {
                 isPaused = true
                 currentLyric = ""
+                lyricTask?.cancel()
                 await DiscordManager.shared.clearStatus()
             }
             return
@@ -88,26 +103,44 @@ class LyricService: ObservableObject {
 
         if isPaused { isPaused = false }
 
-        // Fetch queue for next track preview
+        // Sync accurate progress from Spotify
+        lastFetchTime = Date()
+        lastProgressMs = track.progressMs
+
         if track.id != lastTrackId {
             lastTrackId = track.id
             lyrics = await LyricsManager.shared.lyrics(for: track)
             nextTrack = await SpotifyManager.shared.fetchNextInQueue()
+            // Restart lyric timer for new track
+            lyricTask?.cancel()
+            scheduleLyrics()
         }
+    }
 
-        // Update lyric
-        if let line = LyricsManager.shared.currentLine(in: lyrics, at: track.progressMs),
-           !line.trimmingCharacters(in: .whitespaces).isEmpty {
-            if line != currentLyric {
-                currentLyric = line
-                await DiscordManager.shared.setStatus(text: applyCase(line))
-            }
-        } else if track.id != lastTrackId {
-            // No lyrics found — show song name instead
-            let fallback = "\(track.title) — \(track.artist)"
-            if fallback != currentLyric {
-                currentLyric = fallback
-                await DiscordManager.shared.setStatus(text: applyCase(fallback))
+    // MARK: - Lyric timer (fires at exact lyric timestamps)
+
+    private func scheduleLyrics() {
+        lyricTask = Task {
+            while !Task.isCancelled {
+                let progress = estimatedProgressMs
+
+                if let line = LyricsManager.shared.currentLine(in: lyrics, at: progress),
+                   !line.trimmingCharacters(in: .whitespaces).isEmpty {
+                    if line != currentLyric {
+                        currentLyric = line
+                        await DiscordManager.shared.setStatus(text: applyCase(line))
+                    }
+                }
+
+                // Sleep until the exact next lyric line timestamp
+                if let next = lyrics.first(where: { $0.timestampMs > estimatedProgressMs }) {
+                    let delay = Double(next.timestampMs - estimatedProgressMs) / 1000.0
+                    try? await Task.sleep(for: .seconds(max(0.05, delay)))
+                } else {
+                    // No more lyrics — wait for next Spotify poll to resync
+                    try? await Task.sleep(for: .seconds(3))
+                    break
+                }
             }
         }
     }
