@@ -2,7 +2,7 @@ name: LyricPresence
 options:
   bundleIdPrefix: com.lyricpresence
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
 targets:
   LyricPresence:
     type: application
