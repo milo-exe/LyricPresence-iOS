@@ -233,7 +233,6 @@ struct NowPlayingView: View {
                     .padding(.horizontal, 18)
                     .padding(.vertical, 12)
                     .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
-                    .glassEffect(in: RoundedRectangle(cornerRadius: 16))
                     .animation(.easeInOut(duration: 0.3), value: service.currentLyric)
 
                 Spacer().frame(height: 20)
