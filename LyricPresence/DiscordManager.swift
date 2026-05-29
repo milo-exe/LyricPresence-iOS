@@ -4,9 +4,14 @@ class DiscordManager {
     static let shared = DiscordManager()
 
     private var token: String { UserDefaults.standard.string(forKey: "discordToken") ?? "" }
+    private var prefix: String { UserDefaults.standard.string(forKey: "statusPrefix") ?? "♫" }
+    private var emoji: String { UserDefaults.standard.string(forKey: "statusEmoji") ?? "" }
 
     func setStatus(text: String) async {
-        await patch(body: ["custom_status": ["text": "♫ \(text)", "emoji_name": NSNull()]])
+        let fullText = prefix.isEmpty ? text : "\(prefix) \(text)"
+        var statusBody: [String: Any] = ["text": fullText]
+        if !emoji.isEmpty { statusBody["emoji_name"] = emoji }
+        await patch(body: ["custom_status": statusBody])
     }
 
     func clearStatus() async {

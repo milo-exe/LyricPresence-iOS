@@ -95,6 +95,27 @@ class SpotifyManager: ObservableObject {
                          albumArtUrl: albumArtUrl)
     }
 
+    func fetchNextInQueue() async -> TrackInfo? {
+        guard await ensureValidToken(), let token = accessToken else { return nil }
+        var req = URLRequest(url: URL(string: "https://api.spotify.com/v1/me/player/queue")!)
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let (data, _) = try? await URLSession.shared.data(for: req),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let queue = json["queue"] as? [[String: Any]],
+              let item = queue.first,
+              let id = item["id"] as? String,
+              let name = item["name"] as? String,
+              let artists = item["artists"] as? [[String: Any]],
+              let artist = artists.first?["name"] as? String,
+              let albumObj = item["album"] as? [String: Any],
+              let album = albumObj["name"] as? String,
+              let duration = item["duration_ms"] as? Int
+        else { return nil }
+        let imageUrl = (albumObj["images"] as? [[String: Any]])?.first?["url"] as? String
+        return TrackInfo(id: id, title: name, artist: artist, album: album,
+                         durationMs: duration, progressMs: 0, isPlaying: false, albumArtUrl: imageUrl)
+    }
+
     func logout() {
         accessToken = nil
         refreshToken = nil

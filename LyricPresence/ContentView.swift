@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject var service: LyricService
     @EnvironmentObject var spotify: SpotifyManager
+    @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasOnboarded")
 
     var body: some View {
         TabView {
@@ -12,6 +13,127 @@ struct ContentView: View {
                 .tabItem { Label("Settings", systemImage: "gear") }
         }
         .preferredColorScheme(.dark)
+        .sheet(isPresented: $showOnboarding) {
+            OnboardingView(isPresented: $showOnboarding)
+                .environmentObject(spotify)
+        }
+    }
+}
+
+// MARK: - Onboarding
+
+struct OnboardingView: View {
+    @Binding var isPresented: Bool
+    @EnvironmentObject var spotify: SpotifyManager
+    @State private var page = 0
+    @State private var clientId = UserDefaults.standard.string(forKey: "spotifyClientId") ?? ""
+    @State private var discordToken = UserDefaults.standard.string(forKey: "discordToken") ?? ""
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            TabView(selection: $page) {
+                // Page 1 — Welcome
+                VStack(spacing: 20) {
+                    Spacer()
+                    Text("♫")
+                        .font(.system(size: 72))
+                    Text("LyricPresence")
+                        .font(.largeTitle.bold())
+                        .foregroundStyle(.white)
+                    Text("Show your Spotify lyrics\nas your Discord status — live.")
+                        .font(.body)
+                        .foregroundStyle(.white.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                    Spacer()
+                    Button("Get Started") { withAnimation { page = 1 } }
+                        .buttonStyle(OnboardingButtonStyle())
+                    Spacer().frame(height: 40)
+                }
+                .tag(0)
+
+                // Page 2 — Spotify
+                VStack(spacing: 20) {
+                    Spacer()
+                    Image(systemName: "music.note.list")
+                        .font(.system(size: 56))
+                        .foregroundStyle(.green)
+                    Text("Connect Spotify")
+                        .font(.title.bold())
+                        .foregroundStyle(.white)
+                    Text("Enter your Spotify Client ID.\nGet one free at developer.spotify.com")
+                        .font(.body)
+                        .foregroundStyle(.white.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                    TextField("Client ID", text: $clientId)
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .padding(.horizontal, 32)
+                        .onChange(of: clientId) {
+                            UserDefaults.standard.set(clientId, forKey: "spotifyClientId")
+                        }
+                    if spotify.isAuthorized {
+                        Label("Connected!", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    } else {
+                        Button("Connect Spotify") { spotify.authorize() }
+                            .disabled(clientId.isEmpty)
+                            .buttonStyle(OnboardingButtonStyle(color: .green))
+                    }
+                    Spacer()
+                    Button("Next →") { withAnimation { page = 2 } }
+                        .buttonStyle(OnboardingButtonStyle())
+                    Spacer().frame(height: 40)
+                }
+                .tag(1)
+
+                // Page 3 — Discord
+                VStack(spacing: 20) {
+                    Spacer()
+                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                        .font(.system(size: 56))
+                        .foregroundStyle(.indigo)
+                    Text("Discord Token")
+                        .font(.title.bold())
+                        .foregroundStyle(.white)
+                    Text("Open Discord in your browser → DevTools\n→ Network → any request → Authorization header.")
+                        .font(.body)
+                        .foregroundStyle(.white.opacity(0.6))
+                        .multilineTextAlignment(.center)
+                    SecureField("Paste token here", text: $discordToken)
+                        .textFieldStyle(.roundedBorder)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .padding(.horizontal, 32)
+                        .onChange(of: discordToken) {
+                            UserDefaults.standard.set(discordToken, forKey: "discordToken")
+                        }
+                    Spacer()
+                    Button("Done") {
+                        UserDefaults.standard.set(true, forKey: "hasOnboarded")
+                        isPresented = false
+                    }
+                    .buttonStyle(OnboardingButtonStyle())
+                    Spacer().frame(height: 40)
+                }
+                .tag(2)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .always))
+        }
+    }
+}
+
+struct OnboardingButtonStyle: ButtonStyle {
+    var color: Color = .white
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .fontWeight(.semibold)
+            .foregroundStyle(.black)
+            .frame(width: 200, height: 48)
+            .background(color.opacity(configuration.isPressed ? 0.7 : 1))
+            .clipShape(Capsule())
     }
 }
 
@@ -28,7 +150,6 @@ struct NowPlayingView: View {
 
     var body: some View {
         ZStack {
-            // Blurred art background
             AsyncImage(url: artUrl) { image in
                 image.resizable().scaledToFill()
             } placeholder: {
@@ -46,9 +167,7 @@ struct NowPlayingView: View {
 
                 // Album art
                 AsyncImage(url: artUrl) { image in
-                    image
-                        .resizable()
-                        .scaledToFill()
+                    image.resizable().scaledToFill()
                 } placeholder: {
                     RoundedRectangle(cornerRadius: 24)
                         .fill(Color(white: 0.15))
@@ -58,12 +177,12 @@ struct NowPlayingView: View {
                                 .foregroundStyle(.white.opacity(0.3))
                         )
                 }
-                .frame(width: 260, height: 260)
+                .frame(width: 240, height: 240)
                 .clipShape(RoundedRectangle(cornerRadius: 24))
                 .shadow(color: .black.opacity(0.5), radius: 30, y: 12)
                 .animation(.spring(duration: 0.6), value: artUrl)
 
-                Spacer().frame(height: 32)
+                Spacer().frame(height: 24)
 
                 // Song info
                 if let track = service.currentTrack {
@@ -73,7 +192,6 @@ struct NowPlayingView: View {
                         .multilineTextAlignment(.center)
                         .lineLimit(1)
                         .padding(.horizontal, 32)
-                        .transition(.opacity)
 
                     Spacer().frame(height: 4)
 
@@ -81,14 +199,30 @@ struct NowPlayingView: View {
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.6))
                         .lineLimit(1)
-                        .transition(.opacity)
+
+                    if service.isPaused {
+                        Text("paused")
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.4))
+                            .padding(.top, 2)
+                    }
                 } else {
                     Text(service.isRunning ? "Nothing playing" : "Tap start to begin")
                         .font(.title3)
                         .foregroundStyle(.white.opacity(0.5))
                 }
 
-                Spacer().frame(height: 28)
+                Spacer().frame(height: 20)
+
+                // Error message
+                if let error = service.errorMessage {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(.red.opacity(0.8))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                        .padding(.bottom, 8)
+                }
 
                 // Lyric rectangle
                 Text(service.currentLyric.isEmpty ? "♫" : service.currentLyric)
@@ -102,7 +236,34 @@ struct NowPlayingView: View {
                     .glassEffect(in: RoundedRectangle(cornerRadius: 16))
                     .animation(.easeInOut(duration: 0.3), value: service.currentLyric)
 
-                Spacer().frame(height: 36)
+                Spacer().frame(height: 20)
+
+                // Next up
+                if let next = service.nextTrack {
+                    HStack(spacing: 10) {
+                        AsyncImage(url: URL(string: next.albumArtUrl ?? "")) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            Color(white: 0.2)
+                        }
+                        .frame(width: 36, height: 36)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Next up")
+                                .font(.caption2)
+                                .foregroundStyle(.white.opacity(0.4))
+                            Text("\(next.title) — \(next.artist)")
+                                .font(.caption)
+                                .foregroundStyle(.white.opacity(0.7))
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 32)
+                }
+
+                Spacer().frame(height: 20)
 
                 // Start / Stop button
                 Button {
@@ -128,7 +289,7 @@ struct NowPlayingView: View {
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.25))
 
-                Spacer().frame(height: 36)
+                Spacer().frame(height: 32)
             }
         }
     }
@@ -140,6 +301,11 @@ struct SettingsView: View {
     @EnvironmentObject var spotify: SpotifyManager
     @State private var clientId = UserDefaults.standard.string(forKey: "spotifyClientId") ?? ""
     @State private var discordToken = UserDefaults.standard.string(forKey: "discordToken") ?? ""
+    @State private var statusPrefix = UserDefaults.standard.string(forKey: "statusPrefix") ?? "♫"
+    @State private var statusEmoji = UserDefaults.standard.string(forKey: "statusEmoji") ?? ""
+    @State private var idleTimeout = UserDefaults.standard.integer(forKey: "idleTimeoutMinutes") == 0 ? 5 : UserDefaults.standard.integer(forKey: "idleTimeoutMinutes")
+
+    let emojiOptions = ["", "🎵", "🎶", "🎸", "🎤", "🎧", "🎼", "🎹", "🪗", "🎺", "🥁"]
 
     var body: some View {
         NavigationView {
@@ -151,7 +317,6 @@ struct SettingsView: View {
                         .onChange(of: clientId) {
                             UserDefaults.standard.set(clientId, forKey: "spotifyClientId")
                         }
-
                     if spotify.isAuthorized {
                         HStack {
                             Text("Connected")
@@ -172,7 +337,57 @@ struct SettingsView: View {
                         .onChange(of: discordToken) {
                             UserDefaults.standard.set(discordToken, forKey: "discordToken")
                         }
-                    Text("Find your token in Discord's web app → DevTools → Network → any request → Authorization header.")
+                    Text("DevTools → Network → any request → Authorization header.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Section("Status Appearance") {
+                    HStack {
+                        Text("Prefix")
+                        Spacer()
+                        TextField("♫", text: $statusPrefix)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 80)
+                            .onChange(of: statusPrefix) {
+                                UserDefaults.standard.set(statusPrefix, forKey: "statusPrefix")
+                            }
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Emoji")
+                            .font(.body)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(emojiOptions, id: \.self) { emoji in
+                                    Text(emoji.isEmpty ? "None" : emoji)
+                                        .font(emoji.isEmpty ? .caption : .title2)
+                                        .frame(width: 44, height: 44)
+                                        .background(statusEmoji == emoji ? Color.accentColor.opacity(0.3) : Color.gray.opacity(0.15))
+                                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                                        .onTapGesture {
+                                            statusEmoji = emoji
+                                            UserDefaults.standard.set(emoji, forKey: "statusEmoji")
+                                        }
+                                }
+                            }
+                        }
+                    }
+
+                    HStack {
+                        Text("Preview")
+                        Spacer()
+                        Text("\(statusEmoji.isEmpty ? "" : statusEmoji + " ")\(statusPrefix) current lyric")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                    }
+                }
+
+                Section("Behaviour") {
+                    Stepper("Idle timeout: \(idleTimeout) min", value: $idleTimeout, in: 1...60) {
+                        UserDefaults.standard.set(idleTimeout, forKey: "idleTimeoutMinutes")
+                    }
+                    Text("Auto-stops if nothing plays for \(idleTimeout) minutes.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
