@@ -383,9 +383,10 @@ struct SettingsView: View {
                 }
 
                 Section("Behaviour") {
-                    Stepper("Idle timeout: \(idleTimeout) min", value: $idleTimeout, in: 1...60) {
-                        UserDefaults.standard.set(idleTimeout, forKey: "idleTimeoutMinutes")
-                    }
+                    Stepper("Idle timeout: \(idleTimeout) min", value: $idleTimeout, in: 1...60)
+                        .onChange(of: idleTimeout) {
+                            UserDefaults.standard.set(idleTimeout, forKey: "idleTimeoutMinutes")
+                        }
                     Text("Auto-stops if nothing plays for \(idleTimeout) minutes.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
