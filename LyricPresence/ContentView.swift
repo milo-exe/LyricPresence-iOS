@@ -90,21 +90,17 @@ struct NowPlayingView: View {
 
                 Spacer().frame(height: 28)
 
-                // Lyric pill
-                ZStack {
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(.ultraThinMaterial)
-                        .frame(height: 64)
-
-                    Text(service.currentLyric.isEmpty ? "♫" : service.currentLyric)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundStyle(.white)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .padding(.horizontal, 20)
-                        .animation(.easeInOut(duration: 0.3), value: service.currentLyric)
-                }
-                .padding(.horizontal, 24)
+                // Lyric rectangle
+                Text(service.currentLyric.isEmpty ? "♫" : service.currentLyric)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 16))
+                    .animation(.easeInOut(duration: 0.3), value: service.currentLyric)
 
                 Spacer().frame(height: 36)
 
