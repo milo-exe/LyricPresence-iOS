@@ -295,11 +295,8 @@ struct SettingsView: View {
     @AppStorage("spotifyClientId") private var clientId = ""
     @AppStorage("discordToken") private var discordToken = ""
     @AppStorage("statusPrefix") private var statusPrefix = "♫"
-    @AppStorage("statusEmoji") private var statusEmoji = ""
     @AppStorage("idleTimeoutMinutes") private var idleTimeout = 5
     @AppStorage("lyricsCase") private var lyricsCase = "lower"
-
-    let emojiOptions = ["", "🎵", "🎶", "🎸", "🎤", "🎧", "🎼", "🎹", "🪗", "🎺", "🥁"]
 
     var body: some View {
         NavigationView {
@@ -342,30 +339,10 @@ struct SettingsView: View {
                             }
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Emoji")
-                            .font(.body)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(emojiOptions, id: \.self) { emoji in
-                                    Text(emoji.isEmpty ? "None" : emoji)
-                                        .font(emoji.isEmpty ? .caption : .title2)
-                                        .frame(width: 44, height: 44)
-                                        .background(statusEmoji == emoji ? Color.accentColor.opacity(0.3) : Color.gray.opacity(0.15))
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                        .onTapGesture {
-                                            statusEmoji = emoji
-                                            UserDefaults.standard.set(emoji, forKey: "statusEmoji")
-                                        }
-                                }
-                            }
-                        }
-                    }
-
                     HStack {
                         Text("Preview")
                         Spacer()
-                        Text("\(statusEmoji.isEmpty ? "" : statusEmoji + " ")\(statusPrefix) current lyric")
+                        Text("\(statusPrefix) current lyric")
                             .foregroundStyle(.secondary)
                             .font(.caption)
                     }
