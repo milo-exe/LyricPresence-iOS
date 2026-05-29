@@ -1,0 +1,26 @@
+name: LyricPresence
+options:
+  bundleIdPrefix: com.lyricpresence
+  deploymentTarget:
+    iOS: "16.0"
+targets:
+  LyricPresence:
+    type: application
+    platform: iOS
+    sources: [LyricPresence]
+    info:
+      path: LyricPresence/Info.plist
+      properties:
+        CFBundleDisplayName: LyricPresence
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - lyricpresence
+        UIBackgroundModes:
+          - audio
+        NSMicrophoneUsageDescription: Required to keep the app running in the background.
+        UILaunchScreen: {}
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.lyricpresence.app
+      SWIFT_VERSION: "5.9"
+      MARKETING_VERSION: "1.0.0"
+      CURRENT_PROJECT_VERSION: "1"
