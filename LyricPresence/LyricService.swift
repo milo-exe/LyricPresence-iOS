@@ -125,11 +125,13 @@ class LyricService: ObservableObject {
                 let progress = estimatedProgressMs
 
                 if let line = LyricsManager.shared.currentLine(in: lyrics, at: progress),
-                   !line.trimmingCharacters(in: .whitespaces).isEmpty {
-                    if line != currentLyric {
-                        currentLyric = line
-                        await DiscordManager.shared.setStatus(text: applyCase(line))
-                    }
+                   !line.trimmingCharacters(in: .whitespaces).isEmpty,
+                   line != currentLyric {
+                    currentLyric = line
+                    await DiscordManager.shared.setStatus(text: applyCase(line))
+                } else if lyrics.isEmpty && currentLyric != "" {
+                    currentLyric = ""
+                    await DiscordManager.shared.clearStatus()
                 }
 
                 // Sleep until the exact next lyric line timestamp
