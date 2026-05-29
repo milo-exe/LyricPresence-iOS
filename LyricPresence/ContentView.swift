@@ -126,7 +126,13 @@ struct NowPlayingView: View {
                 .disabled(!spotify.isAuthorized)
                 .animation(.easeInOut(duration: 0.2), value: service.isRunning)
 
-                Spacer().frame(height: 48)
+                Spacer().frame(height: 12)
+
+                Text("made by @kikq on discord")
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.25))
+
+                Spacer().frame(height: 36)
             }
         }
     }
