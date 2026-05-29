@@ -297,6 +297,7 @@ struct SettingsView: View {
     @AppStorage("statusPrefix") private var statusPrefix = "♫"
     @AppStorage("statusEmoji") private var statusEmoji = ""
     @AppStorage("idleTimeoutMinutes") private var idleTimeout = 5
+    @AppStorage("lyricsCase") private var lyricsCase = "lower"
 
     let emojiOptions = ["", "🎵", "🎶", "🎸", "🎤", "🎧", "🎼", "🎹", "🪗", "🎺", "🥁"]
 
@@ -368,6 +369,15 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                             .font(.caption)
                     }
+                }
+
+                Section("Lyrics Style") {
+                    Picker("Case", selection: $lyricsCase) {
+                        Text("lowercase").tag("lower")
+                        Text("Original").tag("original")
+                        Text("UPPERCASE").tag("upper")
+                    }
+                    .pickerStyle(.segmented)
                 }
 
                 Section("Behaviour") {

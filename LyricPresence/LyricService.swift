@@ -16,6 +16,14 @@ class LyricService: ObservableObject {
     private var lyrics: [LyricLine] = []
     private var lastPlayedAt: Date?
 
+    private func applyCase(_ text: String) -> String {
+        switch UserDefaults.standard.string(forKey: "lyricsCase") ?? "lower" {
+        case "upper": return text.uppercased()
+        case "original": return text
+        default: return text.lowercased()
+        }
+    }
+
     private var idleTimeoutMinutes: Int {
         UserDefaults.standard.integer(forKey: "idleTimeoutMinutes") == 0
             ? 5
@@ -92,14 +100,14 @@ class LyricService: ObservableObject {
            !line.trimmingCharacters(in: .whitespaces).isEmpty {
             if line != currentLyric {
                 currentLyric = line
-                await DiscordManager.shared.setStatus(text: line.lowercased())
+                await DiscordManager.shared.setStatus(text: applyCase(line))
             }
         } else if track.id != lastTrackId {
             // No lyrics found — show song name instead
             let fallback = "\(track.title) — \(track.artist)"
             if fallback != currentLyric {
                 currentLyric = fallback
-                await DiscordManager.shared.setStatus(text: fallback.lowercased())
+                await DiscordManager.shared.setStatus(text: applyCase(fallback))
             }
         }
     }
