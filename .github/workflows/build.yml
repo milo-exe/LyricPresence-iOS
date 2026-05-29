@@ -38,9 +38,20 @@ jobs:
           cp -r "$APP_PATH" Payload/LyricPresence.app
           zip -r LyricPresence.ipa Payload
 
-      - name: Upload IPA
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: LyricPresence
           path: LyricPresence.ipa
           retention-days: 30
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Build
+          body: Unsigned IPA — sign with DXSign or similar before installing.
+          prerelease: true
+          files: LyricPresence.ipa
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
