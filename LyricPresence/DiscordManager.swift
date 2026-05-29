@@ -6,7 +6,7 @@ class DiscordManager {
     private var token: String { UserDefaults.standard.string(forKey: "discordToken") ?? "" }
 
     func setStatus(text: String) async {
-        await patch(body: ["custom_status": ["text": text, "emoji_name": "🎵"]])
+        await patch(body: ["custom_status": ["text": "♫ \(text)", "emoji_name": NSNull()]])
     }
 
     func clearStatus() async {

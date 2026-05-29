@@ -18,7 +18,7 @@ class LyricService: ObservableObject {
         timer = Task {
             while !Task.isCancelled {
                 await tick()
-                try? await Task.sleep(for: .seconds(3))
+                try? await Task.sleep(for: .seconds(1))
             }
         }
     }
@@ -53,7 +53,7 @@ class LyricService: ObservableObject {
         if let line = LyricsManager.shared.currentLine(in: lyrics, at: track.progressMs) {
             if line != currentLyric {
                 currentLyric = line
-                await DiscordManager.shared.setStatus(text: line)
+                await DiscordManager.shared.setStatus(text: line.lowercased())
             }
         }
     }
