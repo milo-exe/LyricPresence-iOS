@@ -26,8 +26,8 @@ struct OnboardingView: View {
     @Binding var isPresented: Bool
     @EnvironmentObject var spotify: SpotifyManager
     @State private var page = 0
-    @State private var clientId = UserDefaults.standard.string(forKey: "spotifyClientId") ?? ""
-    @State private var discordToken = UserDefaults.standard.string(forKey: "discordToken") ?? ""
+    @AppStorage("spotifyClientId") private var clientId = ""
+    @AppStorage("discordToken") private var discordToken = ""
 
     var body: some View {
         ZStack {
@@ -71,9 +71,6 @@ struct OnboardingView: View {
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .padding(.horizontal, 32)
-                        .onChange(of: clientId) {
-                            UserDefaults.standard.set(clientId, forKey: "spotifyClientId")
-                        }
                     if spotify.isAuthorized {
                         Label("Connected!", systemImage: "checkmark.circle.fill")
                             .foregroundStyle(.green)
@@ -107,9 +104,6 @@ struct OnboardingView: View {
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .padding(.horizontal, 32)
-                        .onChange(of: discordToken) {
-                            UserDefaults.standard.set(discordToken, forKey: "discordToken")
-                        }
                     Spacer()
                     Button("Done") {
                         UserDefaults.standard.set(true, forKey: "hasOnboarded")
@@ -298,11 +292,11 @@ struct NowPlayingView: View {
 
 struct SettingsView: View {
     @EnvironmentObject var spotify: SpotifyManager
-    @State private var clientId = UserDefaults.standard.string(forKey: "spotifyClientId") ?? ""
-    @State private var discordToken = UserDefaults.standard.string(forKey: "discordToken") ?? ""
-    @State private var statusPrefix = UserDefaults.standard.string(forKey: "statusPrefix") ?? "♫"
-    @State private var statusEmoji = UserDefaults.standard.string(forKey: "statusEmoji") ?? ""
-    @State private var idleTimeout = UserDefaults.standard.integer(forKey: "idleTimeoutMinutes") == 0 ? 5 : UserDefaults.standard.integer(forKey: "idleTimeoutMinutes")
+    @AppStorage("spotifyClientId") private var clientId = ""
+    @AppStorage("discordToken") private var discordToken = ""
+    @AppStorage("statusPrefix") private var statusPrefix = "♫"
+    @AppStorage("statusEmoji") private var statusEmoji = ""
+    @AppStorage("idleTimeoutMinutes") private var idleTimeout = 5
 
     let emojiOptions = ["", "🎵", "🎶", "🎸", "🎤", "🎧", "🎼", "🎹", "🪗", "🎺", "🥁"]
 
@@ -313,9 +307,6 @@ struct SettingsView: View {
                     TextField("Client ID", text: $clientId)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
-                        .onChange(of: clientId) {
-                            UserDefaults.standard.set(clientId, forKey: "spotifyClientId")
-                        }
                     if spotify.isAuthorized {
                         HStack {
                             Text("Connected")
@@ -333,9 +324,6 @@ struct SettingsView: View {
                     SecureField("User Token", text: $discordToken)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
-                        .onChange(of: discordToken) {
-                            UserDefaults.standard.set(discordToken, forKey: "discordToken")
-                        }
                     Text("DevTools → Network → any request → Authorization header.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
