@@ -10,6 +10,7 @@ struct TrackInfo: Equatable {
     let durationMs: Int
     let progressMs: Int
     let isPlaying: Bool
+    let albumArtUrl: String?
 }
 
 class SpotifyManager: ObservableObject {
@@ -87,8 +88,11 @@ class SpotifyManager: ObservableObject {
               let isPlaying = json["is_playing"] as? Bool
         else { return nil }
 
+        let albumArtUrl = (albumObj["images"] as? [[String: Any]])?.first?["url"] as? String
+
         return TrackInfo(id: id, title: name, artist: artist, album: album,
-                         durationMs: duration, progressMs: progress, isPlaying: isPlaying)
+                         durationMs: duration, progressMs: progress, isPlaying: isPlaying,
+                         albumArtUrl: albumArtUrl)
     }
 
     func logout() {
